@@ -152,6 +152,18 @@ int main(int argc, char **argv) {
     Thread-specific - each decoder needs its own
     */
 
+    /*
+    Initialize the AVCodecContext to use the given AVCodec.
+
+    Prior to using this function the context has to be allocated with avcodec_alloc_context3().
+
+    The functions avcodec_find_decoder_by_name(), avcodec_find_encoder_by_name(), avcodec_find_decoder() and avcodec_find_encoder() provide an easy way for retrieving a codec.
+
+    Depending on the codec, you might need to set options in the codec context also for decoding (e.g. width, height, or the pixel or audio sample format in the case the information is not available in the bitstream, as when decoding raw audio or video).
+
+    Options in the codec context can be set either by setting them in the options AVDictionary, or by setting the values in the context itself, directly or by using the av_opt_set() API before calling this function.
+    */
+
     // In short, we imbedding the (de)codec parameters from the stream context into a codec context for actual decoding operations
 
     // allocate codec contexts for respective (de)codecs
