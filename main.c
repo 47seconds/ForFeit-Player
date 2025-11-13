@@ -170,9 +170,37 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    /*
+    int avcodec_parameters_from_context 	( 	struct AVCodecParameters *  	par,
+		const AVCodecContext *  	codec 
+	)
+    
+    Fill the parameters struct based on the values from the supplied codec context.
+
+    Any allocated fields in par are freed and replaced with duplicates of the corresponding fields in codec.
+
+    - Returns
+        >= 0 on success, a negative AVERROR code on failure 
+    */
+
     // copy codec parameters from stream context to codec context
-    avcodec_parameters_to_context(video_codec_ctx, ctx->streams[video_stream_inx]->codecpar);
-    avcodec_parameters_to_context(audio_codec_ctx, ctx->streams[audio_stream_inx]->codecpar);
+    int video_ctx_copy_success = avcodec_parameters_to_context(video_codec_ctx, ctx->streams[video_stream_inx]->codecpar);
+    if (video_ctx_copy_success < 0) {
+        fprintf(stderr, "Could not copy video codec parameters to codec context\n");
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    int audio_ctx_copy_success = avcodec_parameters_to_context(audio_codec_ctx, ctx->streams[audio_stream_inx]->codecpar);
+    if (audio_ctx_copy_success < 0) {
+        fprintf(stderr, "Could not copy audio codec parameters to codec context\n");
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
