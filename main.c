@@ -6,6 +6,7 @@
 
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#include <libavutil/frame.h>
 
 /*
 int avformat_open_input 	( 	AVFormatContext **  	ps,
@@ -128,6 +129,50 @@ int main(int argc, char **argv) {
         avformat_close_input(&ctx);
         return EXIT_FAILURE;
     }
+
+    /*
+    |===================================================================|
+    |                                                                   |
+    | Step 3: Setup codec contexts for the video and audio streams      |  
+    |                                                                   |
+    |===================================================================|
+   */
+
+    /*
+    - Stream Context (codecpar):
+    Read-only metadata from file headers
+    Contains static information (resolution, format, bitrate)
+    Shared across the entire stream
+    Tied to the file - destroyed when file closes
+
+    - Codec Context:
+    Working context for actual decoding operations
+    Mutable - can be configured with decoder options
+    Independent - can exist without the file
+    Thread-specific - each decoder needs its own
+    */
+
+    // In short, we imbedding the (de)codec parameters from the stream context into a codec context for actual decoding operations
+
+    // allocate codec contexts for respective (de)codecs
+    AVCodecContext *video_codec_ctx = avcodec_alloc_context3(video_decodec);
+    if (video_codec_ctx == NULL) {
+        fprintf(stderr, "Could not allocate video codec context\n");
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    AVCodecContext *audio_codec_ctx = avcodec_alloc_context3(audio_decodec);
+    if (audio_codec_ctx == NULL) {
+        fprintf(stderr, "Could not allocate audio codec context\n");
+        avcodec_free_context(&video_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    // copy codec parameters from stream context to codec context
+    avcodec_parameters_to_context(video_codec_ctx, ctx->streams[video_stream_inx]->codecpar);
+    avcodec_parameters_to_context(audio_codec_ctx, ctx->streams[audio_stream_inx]->codecpar);
 
     return EXIT_SUCCESS;
 }
