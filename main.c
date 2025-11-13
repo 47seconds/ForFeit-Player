@@ -260,5 +260,31 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    /*
+    |=============================================================================================|
+    |                                                                                             |
+    | Step 5: Allocating memory for encoded packets from reading file and decoded A/V frame       |  
+    |                                                                                             |
+    |=============================================================================================|
+   */
+
+   AVPacket *packet = av_packet_alloc();
+    if (packet == NULL) {
+        fprintf(stderr, "Could not allocate packet\n");
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    AVFrame *frame = av_frame_alloc();
+    if (frame == NULL) {
+        fprintf(stderr, "Could not allocate frame\n");
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }
