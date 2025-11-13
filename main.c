@@ -152,18 +152,6 @@ int main(int argc, char **argv) {
     Thread-specific - each decoder needs its own
     */
 
-    /*
-    Initialize the AVCodecContext to use the given AVCodec.
-
-    Prior to using this function the context has to be allocated with avcodec_alloc_context3().
-
-    The functions avcodec_find_decoder_by_name(), avcodec_find_encoder_by_name(), avcodec_find_decoder() and avcodec_find_encoder() provide an easy way for retrieving a codec.
-
-    Depending on the codec, you might need to set options in the codec context also for decoding (e.g. width, height, or the pixel or audio sample format in the case the information is not available in the bitstream, as when decoding raw audio or video).
-
-    Options in the codec context can be set either by setting them in the options AVDictionary, or by setting the values in the context itself, directly or by using the av_opt_set() API before calling this function.
-    */
-
     // In short, we imbedding the (de)codec parameters from the stream context into a codec context for actual decoding operations
 
     // allocate codec contexts for respective (de)codecs
@@ -208,6 +196,64 @@ int main(int argc, char **argv) {
     int audio_ctx_copy_success = avcodec_parameters_to_context(audio_codec_ctx, ctx->streams[audio_stream_inx]->codecpar);
     if (audio_ctx_copy_success < 0) {
         fprintf(stderr, "Could not copy audio codec parameters to codec context\n");
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    /*
+    |===================================================================|
+    |                                                                   |
+    | Step 4: Initialize decoders for the video and audio streams       |  
+    |                                                                   |
+    |===================================================================|
+   */
+
+    // initialize decoders
+
+    /*
+    Initialize the AVCodecContext to use the given AVCodec.
+
+    Prior to using this function the context has to be allocated with avcodec_alloc_context3().
+
+    The functions avcodec_find_decoder_by_name(), avcodec_find_encoder_by_name(), avcodec_find_decoder() and avcodec_find_encoder() provide an easy way for retrieving a codec.
+
+    Depending on the codec, you might need to set options in the codec context also for decoding (e.g. width, height, or the pixel or audio sample format in the case the information is not available in the bitstream, as when decoding raw audio or video).
+
+    Options in the codec context can be set either by setting them in the options AVDictionary, or by setting the values in the context itself, directly or by using the av_opt_set() API before calling this function.
+    */
+    
+    /*
+    int avcodec_open2 	( 	AVCodecContext *  	avctx,
+		const AVCodec *  	codec,
+		AVDictionary **  	options 
+	)
+    
+    - Note
+        Always call this function before using decoding routines (such as avcodec_receive_frame()).
+
+    - Parameters
+        avctx	The context to initialize.
+        codec	The codec to open this context for. If a non-NULL codec has been previously passed to avcodec_alloc_context3() or for this context, then this parameter MUST be either NULL or equal to the previously passed codec.
+        options	A dictionary filled with AVCodecContext and codec-private options, which are set on top of the options already set in avctx, can be NULL. On return this object will be filled with options that were not found in the avctx codec context.
+
+    - Returns
+        zero on success, a negative value on error 
+    */
+
+    int video_decoder_init = avcodec_open2(video_codec_ctx, video_decodec, NULL);
+    if (video_decoder_init < 0) {
+        fprintf(stderr, "Could not open video decoder\n");
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    int audio_decoder_init = avcodec_open2(audio_codec_ctx, audio_decodec, NULL);
+    if (audio_decoder_init < 0) {
+        fprintf(stderr, "Could not open audio decoder\n");
         avcodec_free_context(&video_codec_ctx);
         avcodec_free_context(&audio_codec_ctx);
         avformat_close_input(&ctx);
