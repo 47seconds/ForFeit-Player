@@ -117,14 +117,14 @@ int main(int argc, char **argv) {
 
     // get streams codec info context
     AVCodec *video_decodec = avcodec_find_decoder(ctx->streams[video_stream_inx]->codecpar->codec_id);
-    if (video_decodec == NULL) {
+    if (!video_decodec) {
         fprintf(stderr, "Invalid video codec\n");
         avformat_close_input(&ctx);
         return EXIT_FAILURE;
     }
 
     AVCodec *audio_decodec = avcodec_find_decoder(ctx->streams[audio_stream_inx]->codecpar->codec_id);
-    if (audio_decodec == NULL) {
+    if (!audio_decodec) {
         fprintf(stderr, "Invalid audio codec\n");
         avformat_close_input(&ctx);
         return EXIT_FAILURE;
@@ -156,14 +156,14 @@ int main(int argc, char **argv) {
 
     // allocate codec contexts for respective (de)codecs
     AVCodecContext *video_codec_ctx = avcodec_alloc_context3(video_decodec);
-    if (video_codec_ctx == NULL) {
+    if (!video_codec_ctx) {
         fprintf(stderr, "Could not allocate video codec context\n");
         avformat_close_input(&ctx);
         return EXIT_FAILURE;
     }
 
     AVCodecContext *audio_codec_ctx = avcodec_alloc_context3(audio_decodec);
-    if (audio_codec_ctx == NULL) {
+    if (!audio_codec_ctx) {
         fprintf(stderr, "Could not allocate audio codec context\n");
         avcodec_free_context(&video_codec_ctx);
         avformat_close_input(&ctx);
@@ -269,7 +269,7 @@ int main(int argc, char **argv) {
    */
 
    AVPacket *packet = av_packet_alloc();
-    if (packet == NULL) {
+    if (!packet) {
         fprintf(stderr, "Could not allocate packet\n");
         avcodec_free_context(&video_codec_ctx);
         avcodec_free_context(&audio_codec_ctx);
@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
     }
 
     AVFrame *frame = av_frame_alloc();
-    if (frame == NULL) {
+    if (!frame) {
         fprintf(stderr, "Could not allocate frame\n");
         avcodec_free_context(&video_codec_ctx);
         avcodec_free_context(&audio_codec_ctx);
