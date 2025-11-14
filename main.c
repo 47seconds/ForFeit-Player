@@ -286,5 +286,140 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    /*
+    |=============================================================================================|
+    |                                                                                             |
+    | Step 6: A audio extraction and saving funtion to check if everything is working or not      |  
+    |                                                                                             |
+    |=============================================================================================|
+   */
+
+   // Allocate context for output audio file
+   AVFormatContext *output_audio_ctx = NULL;
+   avformat_alloc_output_context2(&output_audio_ctx, NULL, NULL, "extracted_audio.aac");
+   if (!output_audio_ctx) {
+       fprintf(stderr, "Could not allocate output audio context\n");
+       av_frame_free(&frame);
+       av_packet_free(&packet);
+       avcodec_free_context(&video_codec_ctx);
+       avcodec_free_context(&audio_codec_ctx);
+       avformat_close_input(&ctx);
+       return EXIT_FAILURE;
+    }
+
+    // create new audio stream for output file
+    AVStream *in_audio_stream = avformat_new_stream(output_audio_ctx, NULL);
+    if (!in_audio_stream) {
+        fprintf(stderr, "Could not create new audio stream\n");
+        avformat_free_context(output_audio_ctx);
+        av_frame_free(&frame);
+        av_packet_free(&packet);
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    /*
+    You only copy codec parameters (AVCodecParameters) — not the full context — because:
+
+    The output muxer (e.g., MP3) only needs to know stream metadata (codec type, bitrate, sample rate, etc.), not the full decoder state.
+
+    Copying the entire context would bring along internal decoding/encoding buffers and flags that make no sense for writing.
+
+    The output container may use a different codec or different options, so direct context assignment would be invalid.
+    */
+
+    // So in short, copying codec parameters transfers just the format description, not the runtime state — that’s exactly what the muxer (player) needs.
+
+    // copy audio codec parameters from original audio context to output audio stream
+    int copy_audio_params = avcodec_parameters_from_context(in_audio_stream->codecpar, audio_codec_ctx);
+    if (copy_audio_params < 0) {
+        fprintf(stderr, "Could not copy audio codec parameters to output stream\n");
+        avformat_free_context(output_audio_ctx);
+        av_frame_free(&frame);
+        av_packet_free(&packet);
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    // open a AVIOContext for the output file
+    AVIOContext *output_io_ctx = NULL;
+    int output_io_ctx_open = avio_open(&output_io_ctx, "extracted_audio.aac", AVIO_FLAG_WRITE);
+    if (output_io_ctx_open < 0) {
+        fprintf(stderr, "Could not open output IO context\n");
+        avformat_free_context(output_audio_ctx);
+        av_frame_free(&frame);
+        av_packet_free(&packet);
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    // associate the output IO context with the output format context
+    int output_format_write_header = avformat_write_header(output_audio_ctx, NULL);
+    if (output_format_write_header < 0) {
+        fprintf(stderr, "Could not write output format header\n");
+        avio_close(output_io_ctx);
+        avformat_free_context(output_audio_ctx);
+        av_frame_free(&frame);
+        av_packet_free(&packet);
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    while (av_read_frame(ctx, packet)) {
+        if (packet->stream_index != audio_stream_inx) continue;
+
+        int write_frame = av_interleaved_write_frame(output_audio_ctx, packet);
+        if (write_frame < 0) {
+            fprintf(stderr, "Could not write audio frame to output file\n");
+            avio_close(output_io_ctx);
+            avformat_free_context(output_audio_ctx);
+            av_frame_free(&frame);
+            av_packet_free(&packet);
+            avcodec_free_context(&video_codec_ctx);
+            avcodec_free_context(&audio_codec_ctx);
+            avformat_close_input(&ctx);
+            return EXIT_FAILURE;
+        }
+    }
+
+    // write trailer to output file
+    int output_format_write_trailer = av_write_trailer(output_audio_ctx);
+    if (output_format_write_trailer < 0) {
+        fprintf(stderr, "Could not write output format trailer\n");
+        avio_close(output_io_ctx);
+        avformat_free_context(output_audio_ctx);
+        av_frame_free(&frame);
+        av_packet_free(&packet);
+        avcodec_free_context(&video_codec_ctx);
+        avcodec_free_context(&audio_codec_ctx);
+        avformat_close_input(&ctx);
+        return EXIT_FAILURE;
+    }
+
+    /*
+    |=============================================================================================|
+    |                                                                                             |
+    | Step X: Clean and Free everything                                                           |  
+    |                                                                                             |
+    |=============================================================================================|
+   */
+
+    // clean up and free allocated memory
+    avio_close(output_io_ctx);
+    avformat_free_context(output_audio_ctx);
+    av_frame_free(&frame);
+    av_packet_free(&packet);
+    avcodec_free_context(&video_codec_ctx);
+    avcodec_free_context(&audio_codec_ctx);
+    avformat_close_input(&ctx);
+
     return EXIT_SUCCESS;
 }
