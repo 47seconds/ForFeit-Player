@@ -404,6 +404,9 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
+    avio_close(output_io_ctx);
+    avformat_free_context(output_audio_ctx);
+
     /*
     |=============================================================================================|
     |                                                                                             |
@@ -413,8 +416,6 @@ int main(int argc, char **argv) {
    */
 
     // clean up and free allocated memory
-    avio_close(output_io_ctx);
-    avformat_free_context(output_audio_ctx);
     av_frame_free(&frame);
     av_packet_free(&packet);
     avcodec_free_context(&video_codec_ctx);
